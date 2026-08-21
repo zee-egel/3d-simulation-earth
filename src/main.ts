@@ -483,16 +483,15 @@ function createSetbackBuilding(
   scene.add(building);
 }
 
-let timeOfDay = 0; // Temporarily locked to the darkest point of the cycle
+let timeOfDay = 0;
 const headMaterial = new THREE.MeshStandardMaterial({
   color: 0xd8d3b5,
   emissive: 0xffd98a,
   emissiveIntensity: 0,
 });
 
-function updateDayNightCycle(_delta: number) {
-  // Time progression is temporarily disabled to keep the scene fully dark.
-
+function updateDayNightCycle(delta: number) {
+  timeOfDay = (timeOfDay + delta * 0.1) % (Math.PI * 2);
   const sunHeight = Math.sin(timeOfDay);
   const sunDistance = 100;
 
