@@ -121,3 +121,9 @@ For a visual check, use **Visit a crossing**, watch cars stop and turn, wait for
 Drag to pan the city, scroll to zoom toward the cursor, and right-drag to rotate. On touch screens, use one finger to pan and two fingers to zoom/rotate. Overview resets the view; destinations and Visit a crossing frame the simulation from above.
 
 Pedestrian POV follows the nearest simulated person to the map focus at their eye height. Drag to look around, use Next person to switch, and press Escape or City view to restore the previous map view. Pause traffic also pauses the followed pedestrian. If no people exist, increase the People slider first.
+
+## Drive a car
+
+Click **Drive car**, choose a hatchback, sedan, SUV, delivery van, taxi, or city bus, then click **Start driving**. The car starts on a road near your map focus, with a chase camera. Use W / Up to accelerate, S / Down to brake and reverse, A/D or Left/Right to steer, and Space to brake. Escape or City view exits and restores your previous camera. Choosing another destination or pedestrian POV also exits driving.
+
+Driving is an arcade mode with road boundaries and no vehicle collision physics; traffic continues independently. Pause traffic freezes the ambient simulation while your car remains controllable. Switching windows or focusing a UI control releases held driving keys.

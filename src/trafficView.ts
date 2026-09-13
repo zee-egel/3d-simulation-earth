@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Driving } from './driving.ts';
 import { DIRECTIONS, LANE_OFFSET, STEP, STOP_LINE, TrafficSimulation, VEHICLES, lanePoint } from './trafficSimulation.ts';
 import type { TrafficConfig, Point } from './trafficSimulation.ts';
 
@@ -37,9 +38,10 @@ function interpolateAngle(previous: number, current: number, alpha: number) {
 
 export function createTraffic(scene: THREE.Scene, config: TrafficConfig, visit: (point: Point) => void) {
   const simulation = new TrafficSimulation(config);
-  const cars = batch(scene, 300 * 24, true);
+  const driving = new Driving(simulation);
+  const cars = batch(scene, 301 * 24, true);
   const people = batch(scene, 400 * 7, true);
-  const carLights = batch(scene, 300 * 4);
+  const carLights = batch(scene, 301 * 4);
   const signals = batch(scene, simulation.junctions.length * 4 * 3 + simulation.crossings.length * 4);
   const furniture = batch(scene, simulation.junctions.length * 4 * 7 + simulation.crossings.length * 12);
   let furnitureIndex = 0;
@@ -139,14 +141,16 @@ export function createTraffic(scene: THREE.Scene, config: TrafficConfig, visit: 
   const view = { personId: null as number | null, alpha: 1 };
   let accumulator = 0, statusTime = 0;
   function update(delta: number) {
+    driving.update(delta);
     if (!paused) accumulator += Math.min(delta, 0.2);
     while (accumulator >= STEP) { simulation.step(); accumulator -= STEP; }
     const alpha = paused ? 1 : accumulator / STEP;
     view.alpha = alpha;
     let index = 0, lightIndex = 0;
-    for (const car of simulation.cars) {
-      const p = interpolate(car.previous, car.position, alpha);
-      const angle = interpolateAngle(car.previousAngle, car.angle, alpha);
+    for (const car of driving.car ? [...simulation.cars, driving.car] : simulation.cars) {
+      const blend = car === driving.car ? 1 : alpha;
+      const p = interpolate(car.previous, car.position, blend);
+      const angle = interpolateAngle(car.previousAngle, car.angle, blend);
       const v = VEHICLES[car.kind];
       const tint = car.kind === 4 ? 0xf7c844 : car.kind === 5 ? 0x45bac8 : PALETTE[car.color];
       const h = v.height, l = v.length, w = v.width;
@@ -201,5 +205,5 @@ export function createTraffic(scene: THREE.Scene, config: TrafficConfig, visit: 
       panel.querySelector('#traffic-status')!.textContent = `${simulation.completedTrips} junction passages · ${simulation.people.filter((p) => p.state === 'wait').length} waiting to cross`;
     }
   }
-  return { update, simulation, view };
+  return { update, simulation, view, driving };
 }
