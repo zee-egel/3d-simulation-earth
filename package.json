@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node streetLights.test.mjs && node instanceBuildings.test.mjs && node traffic.test.mjs && node cityLayout.test.mjs && node camera.test.mjs"
   },
   "devDependencies": {
     "@types/three": "^0.185.4",
