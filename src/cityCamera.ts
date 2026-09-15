@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
-import { warpPoint, unwarpPoint } from './cityWarp.ts';
 import { VEHICLES } from './trafficSimulation.ts';
 import type { createTraffic } from './trafficView.ts';
 
@@ -11,8 +10,8 @@ export function pedestrianPose(person: Person, alpha: number) {
     z: THREE.MathUtils.lerp(person.previous.z, person.position.z, alpha) };
   const angle = person.previousAngle + Math.atan2(Math.sin(person.angle - person.previousAngle),
     Math.cos(person.angle - person.previousAngle)) * alpha;
-  const position = warpPoint(p);
-  const ahead = warpPoint({ x: p.x + Math.sin(angle) * 0.1, z: p.z + Math.cos(angle) * 0.1 });
+  const position = p;
+  const ahead = { x: p.x + Math.sin(angle) * 0.1, z: p.z + Math.cos(angle) * 0.1 };
   return { ...position, y: (person.state === 'cross' ? 0.12 : 0.2) + person.height * 0.9,
     yaw: Math.atan2(position.x - ahead.x, position.z - ahead.z) };
 }
@@ -89,7 +88,7 @@ export function createCityCamera(camera: THREE.PerspectiveCamera, canvas: HTMLCa
     } else {
       let nearest = Infinity;
       for (const candidate of people) {
-        const p = warpPoint(candidate.position);
+        const p = candidate.position;
         const distance = Math.hypot(p.x - controls.target.x, p.z - controls.target.z);
         if (distance < nearest) { nearest = distance; person = candidate; }
       }
@@ -115,7 +114,7 @@ export function createCityCamera(camera: THREE.PerspectiveCamera, canvas: HTMLCa
   picker.addEventListener('close', () => {
     if (picker.returnValue !== 'drive') return;
     const kind = Number(picker.querySelector<HTMLSelectElement>('select')!.value);
-    if (!driving.start(kind, unwarpPoint(controls.target))) {
+    if (!driving.start(kind, controls.target)) {
       help.textContent = 'No drivable roads are available.';
       return;
     }
@@ -161,10 +160,10 @@ export function createCityCamera(camera: THREE.PerspectiveCamera, canvas: HTMLCa
   return { focus, overview, update() {
     if (driving.car) {
       const car = driving.car;
-      const behind = warpPoint({ x: car.position.x - Math.sin(car.angle) * 4,
-        z: car.position.z - Math.cos(car.angle) * 4 });
-      const ahead = warpPoint({ x: car.position.x + Math.sin(car.angle) * 2,
-        z: car.position.z + Math.cos(car.angle) * 2 });
+      const behind = { x: car.position.x - Math.sin(car.angle) * 4,
+        z: car.position.z - Math.cos(car.angle) * 4 };
+      const ahead = { x: car.position.x + Math.sin(car.angle) * 2,
+        z: car.position.z + Math.cos(car.angle) * 2 };
       camera.position.set(behind.x, 2.6 + VEHICLES[car.kind].height, behind.z);
       camera.lookAt(ahead.x, 0.6, ahead.z);
     } else if (traffic.view.personId !== null) {

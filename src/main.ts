@@ -6,7 +6,6 @@ import { createTraffic } from "./trafficView";
 import { createCityLayout } from "./cityLayout";
 import type { District } from "./cityLayout";
 import { addLandscape } from "./landscapeView";
-import { bendCity, warpPoint, unwarpPoint } from "./cityWarp";
 
 const citySize = 30;
 const blockSize = 8;
@@ -39,7 +38,10 @@ const cameraDistance = cityWidth * 0.72; // Distance from the center of the city
 
 camera.position.set(cameraDistance, cameraDistance, cameraDistance); // Position the camera at (cameraDistance, cameraDistance, cameraDistance)
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  logarithmicDepthBuffer: true,
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
 
@@ -518,7 +520,7 @@ function createStreetLightSpotLight() {
 
 function updateClosestStreetLights() {
   // refresh after one ground unit of movement. use a spatial index if this sort gets costly.
-  const streetCamera = unwarpPoint(camera.position);
+  const streetCamera = camera.position;
   const dx = streetCamera.x - lastStreetLightCameraPosition.x;
   const dz = streetCamera.z - lastStreetLightCameraPosition.y;
   if (dx * dx + dz * dz < 1) return;
@@ -548,13 +550,16 @@ function updateClosestStreetLights() {
 
     light.visible = true;
 
-    const lightPosition = warpPoint(streetLamp);
+    const lightPosition = streetLamp;
     light.position.set(lightPosition.x, sidewalkHeight + 2.4, lightPosition.z);
 
     const targetDistance = 2.5;
+    // 3d952facd9f60e3a1345e95364ba2b43b42e76e7b938947f951a83a9b1b45653
 
-    const lightTarget = warpPoint({ x: streetLamp.x + Math.cos(streetLamp.rotationY) * targetDistance,
-      z: streetLamp.z + Math.sin(streetLamp.rotationY) * targetDistance });
+    const lightTarget = {
+      x: streetLamp.x + Math.cos(streetLamp.rotationY) * targetDistance,
+      z: streetLamp.z + Math.sin(streetLamp.rotationY) * targetDistance,
+    };
     target.position.set(lightTarget.x, 0.1, lightTarget.z);
 
     target.updateMatrixWorld();
@@ -607,7 +612,12 @@ function createWindowInstances() {
 }
 
 function createRoad(x: number, z: number, width: number, depth: number) {
-  const geometry = new THREE.PlaneGeometry(width, depth, Math.max(1, Math.ceil(width / 3)), Math.max(1, Math.ceil(depth / 3)));
+  const geometry = new THREE.PlaneGeometry(
+    width,
+    depth,
+    Math.max(1, Math.ceil(width / 3)),
+    Math.max(1, Math.ceil(depth / 3)),
+  );
   const material = new THREE.MeshStandardMaterial({ color: 0x333333 }); // Dark gray for roads
 
   const road = new THREE.Mesh(geometry, material);
@@ -657,7 +667,12 @@ function createRoadMarkingInstances() {
   scene.add(instancedMarkings);
 }
 
-function createBlockPlatform(x: number, z: number, width = blockSize, depth = blockSize) {
+function createBlockPlatform(
+  x: number,
+  z: number,
+  width = blockSize,
+  depth = blockSize,
+) {
   const geometry = new THREE.BoxGeometry(width, sidewalkHeight, depth);
   const material = new THREE.MeshStandardMaterial({
     color: 0xb8b8b8, // Light gray for block platforms
@@ -689,7 +704,12 @@ function createPark(x: number, z: number) {
   scene.add(park);
 }
 
-function createTree(x: number, z: number, scale: number, base = sidewalkHeight) {
+function createTree(
+  x: number,
+  z: number,
+  scale: number,
+  base = sidewalkHeight,
+) {
   const trunkGeometry = new THREE.CylinderGeometry(
     0.12 * scale,
     0.16 * scale,
@@ -704,7 +724,11 @@ function createTree(x: number, z: number, scale: number, base = sidewalkHeight) 
   scene.add(trunk);
 
   const crownGeometry = new THREE.SphereGeometry(0.7 * scale, 10, 8);
-  const crownMaterial = new THREE.MeshStandardMaterial({ color: [0x4b734b, 0x6f8e54, 0x8aa363, 0xb78b61, 0xd8a1ae][Math.floor(random() * 5)] });
+  const crownMaterial = new THREE.MeshStandardMaterial({
+    color: [0x4b734b, 0x6f8e54, 0x8aa363, 0xb78b61, 0xd8a1ae][
+      Math.floor(random() * 5)
+    ],
+  });
 
   const crown = new THREE.Mesh(crownGeometry, crownMaterial);
   crown.position.set(x, 1.5 * scale + base, z);
@@ -728,23 +752,37 @@ function createCrosswalk(x: number, z: number, horizontal: boolean) {
 }
 
 function getBuildingColor(district: District) {
-  const palette = district === 'downtown' ? [0x647d83, 0x849b9b, 0xc7c8bc, 0x556a77] :
-    district === 'urban' ? [0xc2aa8c, 0xae755d, 0xd9cbbb, 0x987765, 0xb5b7ac] :
-    [0xe1d3b7, 0xbc8269, 0xc8bd9c, 0xa9b8ab, 0xd8ad8e];
+  const palette =
+    district === "downtown"
+      ? [0x647d83, 0x849b9b, 0xc7c8bc, 0x556a77]
+      : district === "urban"
+        ? [0xc2aa8c, 0xae755d, 0xd9cbbb, 0x987765, 0xb5b7ac]
+        : [0xe1d3b7, 0xbc8269, 0xc8bd9c, 0xa9b8ab, 0xd8ad8e];
   return palette[Math.floor(random() * palette.length)];
 }
 
 function isInsideCrosswalk(x: number, z: number, width: number, depth: number) {
-  return crosswalks.some((c) => Math.abs(x - c.x) < (width + (c.horizontal ? roadWidth : roadWidth * 0.8)) / 2 &&
-    Math.abs(z - c.z) < (depth + (c.horizontal ? roadWidth * 0.8 : roadWidth)) / 2);
+  return crosswalks.some(
+    (c) =>
+      Math.abs(x - c.x) <
+        (width + (c.horizontal ? roadWidth : roadWidth * 0.8)) / 2 &&
+      Math.abs(z - c.z) <
+        (depth + (c.horizontal ? roadWidth * 0.8 : roadWidth)) / 2,
+  );
 }
 
 // Crossings only exist on retained streets, never on removed roads or in lakes.
 for (const node of layout.nodes) {
-  const directions = node.neighbors.map((to, d) => to >= 0 ? d : -1).filter((d) => d >= 0);
+  const directions = node.neighbors
+    .map((to, d) => (to >= 0 ? d : -1))
+    .filter((d) => d >= 0);
   if (directions.length < 3 || random() > 0.55) continue;
   const d = directions[Math.floor(random() * directions.length)];
-  crosswalks.push({ x: node.x + [2.7, 0, -2.7, 0][d], z: node.z + [0, 2.7, 0, -2.7][d], horizontal: d % 2 === 1 });
+  crosswalks.push({
+    x: node.x + [2.7, 0, -2.7, 0][d],
+    z: node.z + [0, 2.7, 0, -2.7][d],
+    horizontal: d % 2 === 1,
+  });
 }
 for (const node of layout.nodes) {
   if (node.neighbors.every((to) => to < 0)) continue;
@@ -753,76 +791,172 @@ for (const node of layout.nodes) {
     const to = node.neighbors[direction];
     if (to < 0) continue;
     const end = layout.nodes[to];
-    const x = (node.x + end.x) / 2, z = (node.z + end.z) / 2;
-    createRoad(x, z, direction === 0 ? spacing : roadWidth, direction === 0 ? roadWidth : spacing);
+    const x = (node.x + end.x) / 2,
+      z = (node.z + end.z) / 2;
+    createRoad(
+      x,
+      z,
+      direction === 0 ? spacing : roadWidth,
+      direction === 0 ? roadWidth : spacing,
+    );
     for (let along = 2.2; along < spacing - 1.8; along += 2.5) {
-      const mx = node.x + (direction === 0 ? along : 0), mz = node.z + (direction === 1 ? along : 0);
-      const width = direction === 0 ? 1.2 : 0.09, depth = direction === 1 ? 1.2 : 0.09;
-      if (!isInsideCrosswalk(mx, mz, width, depth)) createRoadMarking(mx, mz, width, depth);
+      const mx = node.x + (direction === 0 ? along : 0),
+        mz = node.z + (direction === 1 ? along : 0);
+      const width = direction === 0 ? 1.2 : 0.09,
+        depth = direction === 1 ? 1.2 : 0.09;
+      if (!isInsideCrosswalk(mx, mz, width, depth))
+        createRoadMarking(mx, mz, width, depth);
     }
-    for (const side of [-1, 1]) streetLightInstances.push({
-      x: x + (direction === 1 ? side * 1.85 : 0), z: z + (direction === 0 ? side * 1.85 : 0),
-      rotationY: direction === 0 ? -side * Math.PI / 2 : side === 1 ? Math.PI : 0,
-    });
+    for (const side of [-1, 1])
+      streetLightInstances.push({
+        x: x + (direction === 1 ? side * 1.85 : 0),
+        z: z + (direction === 0 ? side * 1.85 : 0),
+        rotationY:
+          direction === 0 ? (-side * Math.PI) / 2 : side === 1 ? Math.PI : 0,
+      });
   }
 }
 for (const c of crosswalks) createCrosswalk(c.x, c.z, c.horizontal);
 
-for (let x = 0; x < citySize; x++) for (let z = 0; z < citySize; z++) {
-  const blockX = x * spacing - offset, blockZ = z * spacing - offset;
-  if (layout.reserved(blockX, blockZ, 7)) continue;
-  if (!layout.hasStreet(x, z)) {
-    if (random() < 0.45) createTree(blockX, blockZ, 1.2 + random(), 0);
-    continue;
-  }
-  const district = layout.districtAt(blockX, blockZ);
-  const density = layout.densityAt(blockX, blockZ);
-  createBlockPlatform(blockX, blockZ);
-  // Join parcels where a side street was removed, making larger continuous blocks.
-  const n = citySize - 1;
-  if (x < citySize - 1 && z > 0 && z < n && layout.nodes[x * n + z - 1].neighbors[1] < 0 &&
-      !layout.reserved(blockX + spacing, blockZ, 7) && layout.hasStreet(x + 1, z)) {
-    createBlockPlatform(blockX + spacing / 2, blockZ, roadWidth, blockSize);
-  }
-  if (z < citySize - 1 && x > 0 && x < n && layout.nodes[(x - 1) * n + z].neighbors[0] < 0 &&
-      !layout.reserved(blockX, blockZ + spacing, 7) && layout.hasStreet(x, z + 1)) {
-    createBlockPlatform(blockX, blockZ + spacing / 2, blockSize, roadWidth);
-  }
-  if (district !== 'suburban' && random() < 0.23) {
-    const color = getBuildingColor(district);
-    if (district === 'downtown') createSetbackBuilding(blockX, blockZ, 5.5, 5.2, 18 + random() * 24, 0.8, color, 0xb4d8d6, district);
-    else {
-      createBuilding(blockX - 1.65, blockZ, 1.8, 5.6, 4 + random() * 4, color, 0x9bb9bc, district);
-      createBuilding(blockX + 0.9, blockZ + 1.9, 3.3, 1.8, 4 + random() * 4, color, 0x9bb9bc, district);
-      createTree(blockX + 0.7, blockZ - 0.9, 0.8);
+for (let x = 0; x < citySize; x++)
+  for (let z = 0; z < citySize; z++) {
+    const blockX = x * spacing - offset,
+      blockZ = z * spacing - offset;
+    if (layout.reserved(blockX, blockZ, 7)) continue;
+    if (!layout.hasStreet(x, z)) {
+      if (random() < 0.45) createTree(blockX, blockZ, 1.2 + random(), 0);
+      continue;
     }
-    continue;
-  }
-  if (random() < (district === 'downtown' ? 0.06 : 0.16)) { createPark(blockX, blockZ); continue; }
-  for (let lotX = 0; lotX < lotsPerSide; lotX++) for (let lotZ = 0; lotZ < lotsPerSide; lotZ++) {
-    const bx = blockX + (lotX + 0.5) * lotSize - blockSize / 2;
-    const bz = blockZ + (lotZ + 0.5) * lotSize - blockSize / 2;
-    if (random() < (district === 'suburban' ? 0.36 : 0.10)) { createTree(bx, bz, 0.75 + random() * 0.45); continue; }
-    const width = lotSize * (0.48 + random() * 0.25), depth = lotSize * (0.48 + random() * 0.25);
-    const height = district === 'downtown' ? 10 + Math.pow(random(), 1.7) * 27 * density :
-      district === 'urban' ? 3.2 + random() * 7 : 1.4 + random() * 2.8;
-    const color = getBuildingColor(district);
-    if (district === 'downtown' && random() < 0.65) {
-      createSetbackBuilding(bx, bz, width, depth, height, 0.2 + random() * 0.6, color, 0xb4d8d6, district);
-    } else {
-      createBuilding(bx, bz, width, depth, height, color, district === 'suburban' ? 0x536d76 : 0x9bb9bc, district);
+    const district = layout.districtAt(blockX, blockZ);
+    const density = layout.densityAt(blockX, blockZ);
+    createBlockPlatform(blockX, blockZ);
+    // Join parcels where a side street was removed, making larger continuous blocks.
+    const n = citySize - 1;
+    if (
+      x < citySize - 1 &&
+      z > 0 &&
+      z < n &&
+      layout.nodes[x * n + z - 1].neighbors[1] < 0 &&
+      !layout.reserved(blockX + spacing, blockZ, 7) &&
+      layout.hasStreet(x + 1, z)
+    ) {
+      createBlockPlatform(blockX + spacing / 2, blockZ, roadWidth, blockSize);
     }
-    if (district === 'suburban' || district === 'urban' && random() < 0.35) {
-      const roofHeight = 0.55 + random() * 0.65;
-      const roof = new THREE.Mesh(new THREE.CylinderGeometry(0, 1, 1, 4),
-        new THREE.MeshStandardMaterial({ color: [0x8d5845, 0x596a70, 0xa87459][Math.floor(random() * 3)] }));
-      roof.scale.set(width * 0.74, roofHeight, depth * 0.74);
-      roof.rotation.y = Math.PI / 4;
-      roof.position.set(bx, sidewalkHeight + height + roofHeight / 2, bz); scene.add(roof);
+    if (
+      z < citySize - 1 &&
+      x > 0 &&
+      x < n &&
+      layout.nodes[(x - 1) * n + z].neighbors[0] < 0 &&
+      !layout.reserved(blockX, blockZ + spacing, 7) &&
+      layout.hasStreet(x, z + 1)
+    ) {
+      createBlockPlatform(blockX, blockZ + spacing / 2, blockSize, roadWidth);
     }
+    if (district !== "suburban" && random() < 0.23) {
+      const color = getBuildingColor(district);
+      if (district === "downtown")
+        createSetbackBuilding(
+          blockX,
+          blockZ,
+          5.5,
+          5.2,
+          18 + random() * 24,
+          0.8,
+          color,
+          0xb4d8d6,
+          district,
+        );
+      else {
+        createBuilding(
+          blockX - 1.65,
+          blockZ,
+          1.8,
+          5.6,
+          4 + random() * 4,
+          color,
+          0x9bb9bc,
+          district,
+        );
+        createBuilding(
+          blockX + 0.9,
+          blockZ + 1.9,
+          3.3,
+          1.8,
+          4 + random() * 4,
+          color,
+          0x9bb9bc,
+          district,
+        );
+        createTree(blockX + 0.7, blockZ - 0.9, 0.8);
+      }
+      continue;
+    }
+    if (random() < (district === "downtown" ? 0.06 : 0.16)) {
+      createPark(blockX, blockZ);
+      continue;
+    }
+    for (let lotX = 0; lotX < lotsPerSide; lotX++)
+      for (let lotZ = 0; lotZ < lotsPerSide; lotZ++) {
+        const bx = blockX + (lotX + 0.5) * lotSize - blockSize / 2;
+        const bz = blockZ + (lotZ + 0.5) * lotSize - blockSize / 2;
+        if (random() < (district === "suburban" ? 0.36 : 0.1)) {
+          createTree(bx, bz, 0.75 + random() * 0.45);
+          continue;
+        }
+        const width = lotSize * (0.48 + random() * 0.25),
+          depth = lotSize * (0.48 + random() * 0.25);
+        const height =
+          district === "downtown"
+            ? 10 + Math.pow(random(), 1.7) * 27 * density
+            : district === "urban"
+              ? 3.2 + random() * 7
+              : 1.4 + random() * 2.8;
+        const color = getBuildingColor(district);
+        if (district === "downtown" && random() < 0.65) {
+          createSetbackBuilding(
+            bx,
+            bz,
+            width,
+            depth,
+            height,
+            0.2 + random() * 0.6,
+            color,
+            0xb4d8d6,
+            district,
+          );
+        } else {
+          createBuilding(
+            bx,
+            bz,
+            width,
+            depth,
+            height,
+            color,
+            district === "suburban" ? 0x536d76 : 0x9bb9bc,
+            district,
+          );
+        }
+        if (
+          district === "suburban" ||
+          (district === "urban" && random() < 0.35)
+        ) {
+          const roofHeight = 0.55 + random() * 0.65;
+          const roof = new THREE.Mesh(
+            new THREE.CylinderGeometry(0, 1, 1, 4),
+            new THREE.MeshStandardMaterial({
+              color: [0x8d5845, 0x596a70, 0xa87459][Math.floor(random() * 3)],
+            }),
+          );
+          roof.scale.set(width * 0.74, roofHeight, depth * 0.74);
+          roof.rotation.y = Math.PI / 4;
+          roof.position.set(bx, sidewalkHeight + height + roofHeight / 2, bz);
+          scene.add(roof);
+        }
+      }
   }
-}
-addLandscape(scene, layout.features, citySeed, (x, z, scale) => createTree(x, z, scale, 0.03));
+addLandscape(scene, layout.features, citySeed, (x, z, scale) =>
+  createTree(x, z, scale, 0.03),
+);
 
 createWindowInstances();
 instanceBuildings(scene, spacing * 5);
@@ -834,22 +968,40 @@ for (let i = 0; i < activeStreetLightCount; i++) {
 }
 const traffic = createTraffic(
   scene,
-  { citySize, spacing, offset, seed: citySeed, crosswalks, roadNodes: layout.nodes },
-  (point) => cityCamera.focus(warpPoint(point), 14),
+  {
+    citySize,
+    spacing,
+    offset,
+    seed: citySeed,
+    crosswalks,
+    roadNodes: layout.nodes,
+  },
+  (point) => cityCamera.focus(point, 14),
 );
-bendCity(scene);
-const cityCamera = createCityCamera(camera, renderer.domElement, traffic, cityWidth);
-const explore = document.createElement('select');
-explore.setAttribute('aria-label', 'Explore the city');
-explore.style.cssText = 'position:fixed;top:12px;right:12px;z-index:1001;padding:10px 14px;border-radius:8px;background:#162823ed;color:#f2f1e8;border:1px solid #ffffff35;font:14px system-ui';
-explore.add(new Option('Explore the city · overview', 'overview'));
-layout.features.forEach((feature, index) => explore.add(new Option(feature.name, String(index))));
-explore.addEventListener('keydown', (event) => event.stopPropagation());
-explore.addEventListener('change', () => {
-  if (explore.value === 'overview') { cityCamera.overview(); return; }
+const cityCamera = createCityCamera(
+  camera,
+  renderer.domElement,
+  traffic,
+  cityWidth,
+);
+const explore = document.createElement("select");
+explore.setAttribute("aria-label", "Explore the city");
+explore.style.cssText =
+  "position:fixed;top:12px;right:12px;z-index:1001;padding:10px 14px;border-radius:8px;background:#162823ed;color:#f2f1e8;border:1px solid #ffffff35;font:14px system-ui";
+explore.add(new Option("Explore the city · overview", "overview"));
+layout.features.forEach((feature, index) =>
+  explore.add(new Option(feature.name, String(index))),
+);
+explore.addEventListener("keydown", (event) => event.stopPropagation());
+explore.addEventListener("change", () => {
+  if (explore.value === "overview") {
+    cityCamera.overview();
+    return;
+  }
   const feature = layout.features[Number(explore.value)];
   if (!feature) return;
-  const center = warpPoint(feature), radius = Math.max(feature.rx, feature.rz);
+  const center = feature,
+    radius = Math.max(feature.rx, feature.rz);
   cityCamera.focus(center, radius * 1.3);
 });
 document.body.appendChild(explore);

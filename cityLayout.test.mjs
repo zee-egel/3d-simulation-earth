@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { createCityLayout } from './src/cityLayout.ts';
-import { warpPoint, unwarpPoint } from './src/cityWarp.ts';
 import { TrafficSimulation } from './src/trafficSimulation.ts';
 
 const config = { citySize: 30, spacing: 11, offset: 159.5, seed: 'Alphen aan den Rijn' };
@@ -27,10 +26,6 @@ for (const seed of [config.seed, 'Canal town', 'Garden city']) {
   const districts = new Set(layout.nodes.map((p) => layout.districtAt(p.x, p.z)));
   assert.equal(districts.size, 3);
   for (const center of layout.centers) assert.equal(layout.districtAt(center.x, center.z), 'downtown', 'multiple density centers');
-}
-for (let x = -180; x <= 180; x += 15) for (let z = -180; z <= 180; z += 15) {
-  const roundTrip = unwarpPoint(warpPoint({ x, z }));
-  assert.ok(Math.hypot(roundTrip.x - x, roundTrip.z - z) < 1e-6, 'lighting and camera conversion matches rendered streets');
 }
 const layout = createCityLayout(30, 11, 159.5, config.seed);
 const crosswalks = layout.nodes.filter((n) => n.neighbors.filter((to) => to >= 0).length >= 3).map((n) => {

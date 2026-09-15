@@ -15,7 +15,7 @@ lamps[Symbol.iterator] = function* () {
 };
 const lights = Array.from({ length: count }, () => new THREE.SpotLight());
 const context = {
-  THREE, camera, streetLightInstances: lamps, warpPoint: (p) => p, unwarpPoint: (p) => p,
+  THREE, camera, streetLightInstances: lamps,
   activeStreetLightCount: count,
   lastStreetLightCameraPosition: new THREE.Vector2(Infinity, Infinity),
   activeStreetLightSpots: lights,

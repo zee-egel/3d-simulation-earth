@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { createCityCamera, pedestrianPose } from './src/cityCamera.ts';
 import { Driving } from './src/driving.ts';
 import { TrafficSimulation } from './src/trafficSimulation.ts';
-import { warpPoint } from './src/cityWarp.ts';
 
 class Element extends EventTarget {
   style = {};
@@ -43,10 +42,10 @@ const saved = camera.position.clone();
 click('[data-pov]');
 navigation.update();
 assert.equal(traffic.view.personId, 1);
-const p = warpPoint({ x: 11, z: 30 });
+const p = { x: 11, z: 30 };
 assert.ok(camera.position.distanceTo(new THREE.Vector3(p.x, 0.83, p.z)) < 1e-9);
 const forward = camera.getWorldDirection(new THREE.Vector3());
-const ahead = warpPoint({ x: 11.1, z: 30 });
+const ahead = { x: 11.1, z: 30 };
 assert.ok(forward.dot(new THREE.Vector3(ahead.x - p.x, 0, ahead.z - p.z).normalize()) > 0.99999);
 click('[data-next]');
 assert.equal(traffic.view.personId, 2);
@@ -68,7 +67,7 @@ const wrap = pedestrianPose({ ...person, previousAngle: Math.PI - 0.1, angle: -M
 assert.ok(Number.isFinite(wrap.yaw));
 assert.ok(Math.cos(wrap.yaw) > 0.9, 'heading interpolates across the short arc');
 const paused = pedestrianPose(person, 1);
-assert.equal(paused.x, warpPoint(person.position).x);
+assert.equal(paused.x, person.position.x);
 console.log('Camera checks passed: map restoration, POV pose, heading, next person, removal, destinations.');
 
 const mapPosition = camera.position.clone();

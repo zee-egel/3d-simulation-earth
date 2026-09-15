@@ -25,7 +25,6 @@ export const BRAKING = 2.4;
 export const STEP = 1 / 30;
 export type Stage = "green" | "amber" | "clearance" | "walk" | "flash";
 
-// Dutch-inspired vehicle-actuated control: fixed green, gap extension, wait-green, intergreen.
 export class SignalController {
   phase = 0;
   stage: Stage = "green";
