@@ -429,6 +429,35 @@ function createSetbackBuilding(
 }
 
 let timeOfDay = 0;
+const streetLightPoolMaterial = createStreetLightPoolMaterial();
+
+function createStreetLightPoolMaterial() {
+  const size = 64;
+  const pixels = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const radius = Math.hypot((x + 0.5) / size * 2 - 1, (y + 0.5) / size * 2 - 1);
+      const falloff = Math.max(0, 1 - radius * radius);
+      const index = (y * size + x) * 4;
+      pixels.set([255, 255, 255, Math.round(255 * falloff * falloff)], index);
+    }
+  }
+  const map = new THREE.DataTexture(pixels, size, size);
+  map.magFilter = THREE.LinearFilter;
+  map.minFilter = THREE.LinearFilter;
+  map.needsUpdate = true;
+  // ponytail: road-only illumination; nearby spotlights light moving cars and walls.
+  return new THREE.MeshBasicMaterial({
+    map,
+    color: 0xffd98a,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+    opacity: 0,
+  });
+}
+
 const headMaterial = new THREE.MeshStandardMaterial({
   color: 0xd8d3b5,
   emissive: 0xffd98a,
@@ -450,6 +479,10 @@ function updateDayNightCycle(delta: number) {
   scene.background = nightColor.clone().lerp(dayColor, daylight);
 
   headMaterial.emissiveIntensity = (1 - daylight) * 2;
+  streetLightPoolMaterial.opacity = (1 - daylight) * 0.35;
+  for (const light of activeStreetLightSpots) {
+    light.intensity = (1 - daylight) * 500;
+  }
 
   directionalLight.position.set(
     Math.cos(timeOfDay) * sunDistance,
@@ -472,6 +505,11 @@ function createStreetLightInstances() {
     headMaterial,
     streetLightInstances.length,
   );
+  const pools = new THREE.InstancedMesh(
+    new THREE.PlaneGeometry(3, 5),
+    streetLightPoolMaterial,
+    streetLightInstances.length,
+  );
   const matrix = new THREE.Matrix4();
   const position = new THREE.Vector3();
   const quaternion = new THREE.Quaternion();
@@ -489,13 +527,26 @@ function createStreetLightInstances() {
     quaternion.setFromEuler(rotation);
     matrix.compose(position, quaternion, scale);
     heads.setMatrixAt(index, matrix);
+
+    position.set(
+      light.x + Math.cos(light.rotationY) * 0.9,
+      0.115,
+      light.z + Math.sin(light.rotationY) * 0.9,
+    );
+    rotation.set(-Math.PI / 2, 0, -light.rotationY);
+    quaternion.setFromEuler(rotation);
+    matrix.compose(position, quaternion, scale);
+    pools.setMatrixAt(index, matrix);
   });
 
   poles.instanceMatrix.needsUpdate = true;
   heads.instanceMatrix.needsUpdate = true;
+  pools.instanceMatrix.needsUpdate = true;
+  pools.computeBoundingSphere();
 
   scene.add(poles);
   scene.add(heads);
+  scene.add(pools);
 }
 
 const activeStreetLightCount = 8;

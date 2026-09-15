@@ -43,3 +43,35 @@ update();
 assert.equal(selections, 3);
 assert.equal(lights[0].position.x, 39);
 console.log('Streetlight selection checks passed.');
+
+runInNewContext(source.slice(source.indexOf('function createStreetLightPoolMaterial()'),
+  source.indexOf('const headMaterial')), context);
+const poolMaterial = context.createStreetLightPoolMaterial();
+const { data, width, height } = poolMaterial.map.image;
+const alpha = (x, y) => data[(y * width + x) * 4 + 3];
+assert.equal(alpha(0, 0), 0);
+assert.ok(alpha(width / 2, height / 2) > 250);
+assert.ok(alpha(width / 2, height / 2) > alpha(width / 4, height / 2));
+assert.equal(poolMaterial.depthWrite, false);
+assert.equal(poolMaterial.depthTest, true);
+
+Object.assign(context, {
+  timeOfDay: Math.PI / 2,
+  ambientLight: new THREE.AmbientLight(),
+  directionalLight: new THREE.DirectionalLight(),
+  scene: new THREE.Scene(),
+  headMaterial: new THREE.MeshStandardMaterial(),
+  streetLightPoolMaterial: poolMaterial,
+});
+runInNewContext(source.slice(source.indexOf('function updateDayNightCycle('),
+  source.indexOf('function createStreetLightInstances()')).replace('delta: number', 'delta'), context);
+for (const [time, night] of [[Math.PI / 2, 0], [Math.PI, 0.5], [Math.PI * 1.5, 1]]) {
+  context.timeOfDay = time;
+  context.updateDayNightCycle(0);
+  assert.ok(Math.abs(poolMaterial.opacity - night * 0.35) < 1e-10);
+  assert.ok(Math.abs(context.headMaterial.emissiveIntensity - night * 2) < 1e-10);
+  for (const light of lights) assert.ok(Math.abs(light.intensity - night * 500) < 1e-10);
+}
+poolMaterial.map.dispose();
+poolMaterial.dispose();
+console.log('Streetlight pool and day/night checks passed.');
