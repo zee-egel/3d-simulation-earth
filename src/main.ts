@@ -6,8 +6,10 @@ import { createTraffic } from "./trafficView";
 import { createCityLayout } from "./cityLayout";
 import type { District } from "./cityLayout";
 import { addLandscape } from "./landscapeView";
+import { exportCity } from "./exportCity";
+import { readCitySettings } from "./citySettings";
 
-const citySize = 30;
+const { citySize, citySeed } = readCitySettings(window.location.search);
 const blockSize = 8;
 const lotsPerSide = 2;
 const lotSize = blockSize / lotsPerSide;
@@ -20,7 +22,6 @@ const sidewalkHeight = 0.2;
 
 const groundPadding = spacing * 0.5;
 const groundSize = cityWidth + groundPadding * 2;
-const citySeed = "Alphen aan den Rijn";
 const layout = createCityLayout(citySize, spacing, offset, citySeed);
 
 const scene = new THREE.Scene();
@@ -31,7 +32,7 @@ const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   0.1,
-  1000,
+  Math.max(1000, cityWidth * 3),
 );
 
 const cameraDistance = cityWidth * 0.72; // Distance from the center of the city
@@ -436,7 +437,10 @@ function createStreetLightPoolMaterial() {
   const pixels = new Uint8Array(size * size * 4);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const radius = Math.hypot((x + 0.5) / size * 2 - 1, (y + 0.5) / size * 2 - 1);
+      const radius = Math.hypot(
+        ((x + 0.5) / size) * 2 - 1,
+        ((y + 0.5) / size) * 2 - 1,
+      );
       const falloff = Math.max(0, 1 - radius * radius);
       const index = (y * size + x) * 4;
       pixels.set([255, 255, 255, Math.round(255 * falloff * falloff)], index);
@@ -1035,10 +1039,16 @@ const cityCamera = createCityCamera(
   traffic,
   cityWidth,
 );
+const cityPanel = document.createElement("div");
+cityPanel.style.cssText =
+  "position:fixed;top:12px;right:12px;z-index:1001;display:grid;gap:10px;width:260px;max-width:calc(100vw - 24px);box-sizing:border-box;padding:12px;border-radius:8px;background:#162823ed;color:#f2f1e8;border:1px solid #ffffff35;font:14px system-ui";
+cityPanel.addEventListener("keydown", (event) => event.stopPropagation());
+cityPanel.addEventListener("keyup", (event) => event.stopPropagation());
+document.body.appendChild(cityPanel);
 const explore = document.createElement("select");
 explore.setAttribute("aria-label", "Explore the city");
 explore.style.cssText =
-  "position:fixed;top:12px;right:12px;z-index:1001;padding:10px 14px;border-radius:8px;background:#162823ed;color:#f2f1e8;border:1px solid #ffffff35;font:14px system-ui";
+  "width:100%;box-sizing:border-box;padding:8px;border-radius:6px;background:#162823;color:#f2f1e8;border:1px solid #ffffff35;font:inherit";
 explore.add(new Option("Explore the city · overview", "overview"));
 layout.features.forEach((feature, index) =>
   explore.add(new Option(feature.name, String(index))),
@@ -1055,7 +1065,50 @@ explore.addEventListener("change", () => {
     radius = Math.max(feature.rx, feature.rz);
   cityCamera.focus(center, radius * 1.3);
 });
-document.body.appendChild(explore);
+cityPanel.appendChild(explore);
+const settingsForm = document.createElement("form");
+settingsForm.style.cssText = "display:grid;gap:8px";
+settingsForm.innerHTML = `
+  <label style="display:grid;gap:4px">City size (blocks per side)
+    <input name="size" type="number" min="10" max="100" step="1" required>
+  </label>
+  <label style="display:grid;gap:4px">Seed
+    <input name="seed" type="text" maxlength="120" required>
+  </label>
+  <button type="submit">Apply & regenerate</button>`;
+const sizeInput = settingsForm.querySelector<HTMLInputElement>('input[name="size"]')!;
+const seedInput = settingsForm.querySelector<HTMLInputElement>('input[name="seed"]')!;
+sizeInput.value = String(citySize);
+seedInput.value = citySeed;
+settingsForm.querySelectorAll<HTMLElement>("input, button").forEach((control) => {
+  control.style.cssText = explore.style.cssText;
+});
+settingsForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const url = new URL(window.location.href);
+  url.searchParams.set("size", sizeInput.value);
+  url.searchParams.set("seed", seedInput.value.trim());
+  window.location.assign(url.href);
+});
+cityPanel.appendChild(settingsForm);
+const exportButton = document.createElement("button");
+exportButton.textContent = "Export city (.glb)";
+exportButton.style.cssText = explore.style.cssText;
+exportButton.addEventListener("keydown", (event) => event.stopPropagation());
+exportButton.addEventListener("click", async () => {
+  exportButton.disabled = true;
+  exportButton.textContent = "Exporting…";
+  try {
+    await exportCity(scene);
+  } catch (error) {
+    console.error("City export failed", error);
+    alert("City export failed. Please try again.");
+  } finally {
+    exportButton.disabled = false;
+    exportButton.textContent = "Export city (.glb)";
+  }
+});
+cityPanel.appendChild(exportButton);
 animate();
 
 window.addEventListener("resize", () => {
